@@ -110,7 +110,31 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
         TicToc t_o;
         vector<uchar> status;
         vector<float> err;
-        cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3);
+        cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3, 
+                                 cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 40, 0.001));
+
+        // Forward-Backward Tracking Check
+        vector<uchar> reverse_status;
+        vector<cv::Point2f> reverse_pts = cur_pts;
+        cv::calcOpticalFlowPyrLK(forw_img, cur_img, forw_pts, reverse_pts, reverse_status, err, cv::Size(21, 21), 3, 
+                                 cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 40, 0.001));
+        
+        for(size_t i = 0; i < status.size(); i++)
+        {
+            if(status[i] && reverse_status[i])
+            {
+                cv::Point2f dist_pt = cur_pts[i] - reverse_pts[i];
+                float dist = (dist_pt.x * dist_pt.x + dist_pt.y * dist_pt.y);
+                if(dist > 0.5) // 0.5 pixel squared error threshold (approx 0.7 px distance)
+                {
+                    status[i] = 0;
+                }
+            }
+            else
+            {
+                status[i] = 0;
+            }
+        }
 
         for (int i = 0; i < int(forw_pts.size()); i++)
             if (status[i] && !inBorder(forw_pts[i]))
@@ -150,6 +174,13 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
         }
         else
             n_pts.clear();
+
+        if (!n_pts.empty())
+        {
+            cv::TermCriteria criteria = cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 40, 0.001);
+            cv::cornerSubPix(forw_img, n_pts, cv::Size(5, 5), cv::Size(-1, -1), criteria);
+        }
+
         ROS_DEBUG("detect feature costs: %fms", t_t.toc());
 
         ROS_DEBUG("add feature begins");
