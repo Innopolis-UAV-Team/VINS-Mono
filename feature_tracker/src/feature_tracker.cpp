@@ -31,6 +31,7 @@ void reduceVector(vector<int> &v, vector<uchar> status)
 
 FeatureTracker::FeatureTracker()
 {
+    clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
 }
 
 void FeatureTracker::setMask()
@@ -86,7 +87,6 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
 
     if (EQUALIZE)
     {
-        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
         TicToc t_c;
         clahe->apply(_img, img);
         ROS_DEBUG("CLAHE costs: %fms", t_c.toc());
@@ -113,26 +113,29 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
         cv::calcOpticalFlowPyrLK(cur_img, forw_img, cur_pts, forw_pts, status, err, cv::Size(21, 21), 3, 
                                  cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 40, 0.001));
 
-        // Forward-Backward Tracking Check
-        vector<uchar> reverse_status;
-        vector<cv::Point2f> reverse_pts = cur_pts;
-        cv::calcOpticalFlowPyrLK(forw_img, cur_img, forw_pts, reverse_pts, reverse_status, err, cv::Size(21, 21), 3, 
-                                 cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 40, 0.001));
-        
-        for(size_t i = 0; i < status.size(); i++)
+        // Forward-Backward Tracking Check (optional for performance)
+        if (USE_BIDIRECTIONAL_FLOW)
         {
-            if(status[i] && reverse_status[i])
+            vector<uchar> reverse_status;
+            vector<cv::Point2f> reverse_pts = cur_pts;
+            cv::calcOpticalFlowPyrLK(forw_img, cur_img, forw_pts, reverse_pts, reverse_status, err, cv::Size(21, 21), 3, 
+                                     cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 40, 0.001));
+            
+            for(size_t i = 0; i < status.size(); i++)
             {
-                cv::Point2f dist_pt = cur_pts[i] - reverse_pts[i];
-                float dist = (dist_pt.x * dist_pt.x + dist_pt.y * dist_pt.y);
-                if(dist > 0.5) // 0.5 pixel squared error threshold (approx 0.7 px distance)
+                if(status[i] && reverse_status[i])
+                {
+                    cv::Point2f dist_pt = cur_pts[i] - reverse_pts[i];
+                    float dist = (dist_pt.x * dist_pt.x + dist_pt.y * dist_pt.y);
+                    if(dist > 0.5) // 0.5 pixel squared error threshold (approx 0.7 px distance)
+                    {
+                        status[i] = 0;
+                    }
+                }
+                else
                 {
                     status[i] = 0;
                 }
-            }
-            else
-            {
-                status[i] = 0;
             }
         }
 
@@ -180,11 +183,10 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
             // Grid-based selection to ensure uniform distribution (User request: Grid -> uniformly select)
             // We divide the image into cells of size MIN_DIST and pick the strongest feature in each cell
             int grid_size = MIN_DIST; 
-            int grid_rows = ROW / grid_size + 1;
             int grid_cols = COL / grid_size + 1;
             
-            // Vector to store the best keypoint for each grid cell
-            vector<cv::KeyPoint> grid_best_features(grid_rows * grid_cols);
+            // Use unordered_map to store only occupied grid cells (more memory efficient)
+            std::unordered_map<int, cv::KeyPoint> grid_best_features;
             
             for (const auto& kp : keypoints) {
                 // Check against mask (distance to existing tracked features)
@@ -193,22 +195,19 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
 
                 int r = int(kp.pt.y) / grid_size;
                 int c = int(kp.pt.x) / grid_size;
+                int idx = r * grid_cols + c;
                 
-                if (r >= 0 && r < grid_rows && c >= 0 && c < grid_cols) {
-                    int idx = r * grid_cols + c;
-                    // Keep the feature with the highest response in this grid cell
-                    if (kp.response > grid_best_features[idx].response) {
-                        grid_best_features[idx] = kp;
-                    }
+                // Keep the feature with the highest response in this grid cell
+                auto it = grid_best_features.find(idx);
+                if (it == grid_best_features.end() || kp.response > it->second.response) {
+                    grid_best_features[idx] = kp;
                 }
             }
 
             // Collect the best features from the grid
-            for (const auto& kp : grid_best_features) {
-                if (kp.response > 0) {
-                    n_pts.push_back(kp.pt);
-                    if (int(n_pts.size()) >= n_max_cnt) break;
-                }
+            for (const auto& grid_cell : grid_best_features) {
+                n_pts.push_back(grid_cell.second.pt);
+                if (int(n_pts.size()) >= n_max_cnt) break;
             }
         }
         else
@@ -216,8 +215,15 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
 
         if (!n_pts.empty())
         {
-            cv::TermCriteria criteria = cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 40, 0.001);
-            cv::cornerSubPix(forw_img, n_pts, cv::Size(5, 5), cv::Size(-1, -1), criteria);
+            // Smart SubPixel: apply only to top strong candidates to save time
+            int refine_count = std::min(50, (int)n_pts.size());
+            if (refine_count > 0) {
+                vector<cv::Point2f> pts_to_refine(n_pts.begin(), n_pts.begin() + refine_count);
+                cv::TermCriteria criteria = cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 40, 0.001);
+                cv::cornerSubPix(forw_img, pts_to_refine, cv::Size(5, 5), cv::Size(-1, -1), criteria);
+                // Copy refined points back
+                std::copy(pts_to_refine.begin(), pts_to_refine.end(), n_pts.begin());
+            }
         }
 
         ROS_DEBUG("detect feature costs: %fms", t_t.toc());

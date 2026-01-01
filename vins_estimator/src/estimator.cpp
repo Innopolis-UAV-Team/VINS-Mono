@@ -112,6 +112,20 @@ void Estimator::processIMU(double dt, const Vector3d &linear_acceleration, const
         Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
         Ps[j] += dt * Vs[j] + 0.5 * dt * dt * un_acc;
         Vs[j] += dt * un_acc;
+        
+        // Zero Velocity Update (ZUPT) - detect stationary state
+        if (ENABLE_ZUPT)
+        {
+            double vel_norm = Vs[j].norm();
+            double acc_deviation = std::abs(linear_acceleration.norm() - G.norm());
+            
+            // If velocity is low and acceleration is close to gravity (stationary)
+            if (vel_norm < ZUPT_VEL_THRESHOLD && acc_deviation < ZUPT_ACC_THRESHOLD)
+            {
+                Vs[j] = Vector3d::Zero();
+                ROS_DEBUG("ZUPT applied: velocity reset to zero");
+            }
+        }
     }
     acc_0 = linear_acceleration;
     gyr_0 = angular_velocity;

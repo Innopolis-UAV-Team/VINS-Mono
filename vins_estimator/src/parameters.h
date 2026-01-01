@@ -37,7 +37,9 @@ extern double TR;
 extern int ESTIMATE_TD;
 extern int ROLLING_SHUTTER;
 extern double ROW, COL;
-
+extern int ENABLE_ZUPT;
+extern double ZUPT_VEL_THRESHOLD;
+extern double ZUPT_ACC_THRESHOLD;
 
 void readParameters(ros::NodeHandle &n);
 

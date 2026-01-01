@@ -23,5 +23,6 @@ extern int EQUALIZE;
 extern int FISHEYE;
 extern bool PUB_THIS_FRAME;
 extern int FAST_THRESHOLD;
+extern int USE_BIDIRECTIONAL_FLOW;
 
 void readParameters(ros::NodeHandle &n);

@@ -18,6 +18,7 @@ int FOCAL_LENGTH;
 int FISHEYE;
 bool PUB_THIS_FRAME;
 int FAST_THRESHOLD;
+int USE_BIDIRECTIONAL_FLOW;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -63,6 +64,12 @@ void readParameters(ros::NodeHandle &n)
         FAST_THRESHOLD = fsSettings["fast_threshold"];
     else
         FAST_THRESHOLD = 20;
+    
+    // Optional parameter for bidirectional flow, default to 1 (enabled) if not set
+    if (!fsSettings["use_bidirectional_flow"].empty())
+        USE_BIDIRECTIONAL_FLOW = fsSettings["use_bidirectional_flow"];
+    else
+        USE_BIDIRECTIONAL_FLOW = 1;
 
     if (FISHEYE == 1)
         FISHEYE_MASK = VINS_FOLDER_PATH + "config/fisheye_mask.jpg";

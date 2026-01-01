@@ -22,6 +22,9 @@ std::string VINS_RESULT_PATH;
 std::string IMU_TOPIC;
 double ROW, COL;
 double TD, TR;
+int ENABLE_ZUPT;
+double ZUPT_VEL_THRESHOLD;
+double ZUPT_ACC_THRESHOLD;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -132,6 +135,13 @@ void readParameters(ros::NodeHandle &n)
     {
         TR = 0;
     }
+    
+    // Zero Velocity Update parameters
+    ENABLE_ZUPT = fsSettings["enable_zupt"].empty() ? 0 : (int)fsSettings["enable_zupt"];
+    ZUPT_VEL_THRESHOLD = fsSettings["zupt_vel_threshold"].empty() ? 0.05 : (double)fsSettings["zupt_vel_threshold"];
+    ZUPT_ACC_THRESHOLD = fsSettings["zupt_acc_threshold"].empty() ? 0.1 : (double)fsSettings["zupt_acc_threshold"];
+    if (ENABLE_ZUPT)
+        ROS_INFO_STREAM("Zero Velocity Update enabled, vel_threshold: " << ZUPT_VEL_THRESHOLD << ", acc_threshold: " << ZUPT_ACC_THRESHOLD);
     
     fsSettings.release();
 }

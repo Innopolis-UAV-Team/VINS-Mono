@@ -178,7 +178,17 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
                 for (unsigned int j = 0; j < trackerData[i].cur_pts.size(); j++)
                 {
                     double len = std::min(1.0, 1.0 * trackerData[i].track_cnt[j] / WINDOW_SIZE);
-                    cv::circle(tmp_img, trackerData[i].cur_pts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
+                    
+                    // Calculate velocity magnitude as proxy for depth (closer = faster motion)
+                    double vel_x = trackerData[i].pts_velocity[j].x;
+                    double vel_y = trackerData[i].pts_velocity[j].y;
+                    double vel_mag = std::sqrt(vel_x * vel_x + vel_y * vel_y);
+                    
+                    // Map velocity to circle radius: high velocity (close) = large radius
+                    // Velocity range ~0-50 pixels/sec, map to radius 1-4
+                    int radius = 1 + static_cast<int>(std::min(3.0, vel_mag / 10.0));
+                    
+                    cv::circle(tmp_img, trackerData[i].cur_pts[j], radius, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
                     //draw speed line
                     /*
                     Vector2d tmp_cur_un_pts (trackerData[i].cur_un_pts[j].x, trackerData[i].cur_un_pts[j].y);

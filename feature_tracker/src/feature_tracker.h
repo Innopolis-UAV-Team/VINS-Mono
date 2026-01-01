@@ -5,6 +5,7 @@
 #include <queue>
 #include <execinfo.h>
 #include <csignal>
+#include <thread>
 
 #include <opencv2/opencv.hpp>
 #include <eigen3/Eigen/Dense>
@@ -60,6 +61,7 @@ class FeatureTracker
     camodocal::CameraPtr m_camera;
     double cur_time;
     double prev_time;
+    cv::Ptr<cv::CLAHE> clahe;  // Cached CLAHE object for performance
 
     static int n_id;
 };
