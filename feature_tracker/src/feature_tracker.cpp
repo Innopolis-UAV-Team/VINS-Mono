@@ -171,12 +171,14 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
             if (mask.size() != forw_img.size())
                 cout << "wrong size " << endl;
             
-            // Use FAST detector as requested (faster than GFTT/Harris)
+            // Use AGAST detector (improved version of FAST)
             n_pts.clear();
             vector<cv::KeyPoint> keypoints;
-            cv::FAST(forw_img, keypoints, FAST_THRESHOLD, true);
+            // AGAST_5_8 is generally more robust than FAST
+            cv::AGAST(forw_img, keypoints, FAST_THRESHOLD, true);
             
-            // Sort by response to prioritize strong features
+            // Smart selection: Sort by response (strength) + Spatial suppression (MIN_DIST)
+            // This ensures we pick the strongest features that are well-distributed
             sort(keypoints.begin(), keypoints.end(), [](const cv::KeyPoint& a, const cv::KeyPoint& b) {
                 return a.response > b.response;
             });
