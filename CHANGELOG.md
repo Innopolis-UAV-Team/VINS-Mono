@@ -1,6 +1,71 @@
 # CHANGELOG
 
-## [Unreleased] - 2026-01-01/02
+## [Unreleased] - 2026-01-02
+
+### Added - Velocity-Based Adaptive Feature Tracking
+- **Dynamic feature count adjustment** based on estimated velocity for high-speed navigation stability
+  - Estimates velocity from optical flow magnitude between frames
+  - Automatically boosts feature count when velocity exceeds threshold
+  - Default: 150 features → 200 features (thermal) or 150 features (USB) at high speed
+  - Configurable velocity threshold (default: 2.5-3.0 m/s)
+  - Prevents odometry failure during fast UAV motion
+- **Configuration parameters**:
+  ```yaml
+  enable_velocity_check: 1            # Enable/disable adaptive tracking
+  max_velocity_threshold: 2.5         # Velocity threshold (m/s)
+  velocity_boost_features: 50         # Extra features to add at high speed
+  min_parallax_threshold: 3.0         # Minimum parallax (pixels)
+  ```
+
+### Modified - System Robustness & Error Handling
+- **Negative timestamp handling**: System now gracefully handles timestamp synchronization issues after reboot
+  - Detects negative `dt_1` values and skips frame with warning instead of assertion failure
+  - Prevents crashes during system recovery after failure detection
+- **Increased failure detection thresholds** for high-speed navigation:
+  - Horizontal position jump: 5m → 10m
+  - Vertical position jump: 1m → 3m
+  - Reduces false positive reboots during aggressive maneuvers
+
+### Modified - Performance Optimization
+- **Bidirectional optical flow disabled by default** in both camera configs for ~40-50% speedup
+  - Trade-off: slightly reduced tracking accuracy for real-time performance
+  - Can be re-enabled via `use_bidirectional_flow: 1` if CPU allows
+- **Reduced solver complexity**:
+  - `max_solver_time`: 0.035s → 0.03s
+  - `max_num_iterations`: 20-25 → 15 iterations
+  - `keyframe_parallax`: 5-8 → 10 pixels (fewer keyframes)
+- **Optimized feature tracking**:
+  - Thermal camera: 200 → 150 features base count
+  - USB camera: maintained at 150 features
+  - `min_dist`: 10-12 → 15 pixels (thermal), 10 pixels (USB)
+  - `fast_threshold`: 15-20 → 20 (fewer but stronger corners)
+
+### Modified - Camera-Specific Tuning
+- **Thermal camera (384×288) optimizations**:
+  - `F_threshold`: 2.0 (increased noise tolerance)
+  - `keyframe_parallax`: 10.0 pixels
+  - `min_parallax_threshold`: 3.0 pixels
+  - Stricter ZUPT: `vel_threshold=0.15`, `acc_threshold=0.25`
+- **USB camera (640×480) optimizations**:
+  - `F_threshold`: 1.0 (higher resolution = tighter threshold)
+  - `min_parallax_threshold`: 5.0 pixels
+  - `max_velocity_threshold`: 3.0 m/s
+
+### Added - Velocity Logging
+- **Real-time velocity output** in estimator logs
+  - Horizontal velocity: `sqrt(vx² + vy²)` in m/s
+  - Vertical velocity: `vz` in m/s
+  - Format: `Pose: x=... y=... z=... | Vel: horiz=... vert=... m/s`
+  - Helps diagnose IMU drift and odometry issues
+
+### Technical Details
+- Velocity estimation formula: `velocity = (avg_optical_flow / (FOCAL_LENGTH * dt)) * depth_scale`
+- Depth scale factor: 3.0 (assumes ~3m average scene depth)
+- Flow outlier rejection: ignores features with >100px displacement
+- Adaptive feature count updated at start of each `readImage()` call
+- Feature boost only applied when sufficient tracked points available (>10 features)
+
+## [Previous] - 2026-01-01/02
 
 ### Added - IMU Data Filtering & Scale Correction
 

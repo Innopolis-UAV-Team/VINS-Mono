@@ -209,8 +209,18 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
             //cv::waitKey(5);
             pub_match.publish(ptr->toImageMsg());
         }
+        
+        // Print tracking statistics with velocity info
+        if (ENABLE_VELOCITY_CHECK)
+        {
+            ROS_INFO("[TRACKER] Features: %lu/%d | Velocity: %.2f m/s | Time: %.1fms",
+                     trackerData[0].cur_pts.size(), 
+                     trackerData[0].adaptive_max_cnt,
+                     trackerData[0].current_velocity,
+                     t_r.toc());
+        }
     }
-    ROS_INFO("whole feature tracker processing costs: %f", t_r.toc());
+    // ROS_INFO("whole feature tracker processing costs: %f", t_r.toc());
 }
 
 int main(int argc, char **argv)

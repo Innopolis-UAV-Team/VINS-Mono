@@ -327,8 +327,17 @@ void process()
                 {
                     double dt_1 = img_t - current_time;
                     double dt_2 = t - img_t;
+                    
+                    // Handle timestamp synchronization issues after reboot
+                    if (dt_1 < 0)
+                    {
+                        ROS_WARN("Negative dt_1 detected: %.6f (img_t=%.6f, current_time=%.6f). Skipping frame.",
+                                 dt_1, img_t, current_time);
+                        current_time = img_t;
+                        continue;
+                    }
+                    
                     current_time = img_t;
-                    ROS_ASSERT(dt_1 >= 0);
                     ROS_ASSERT(dt_2 >= 0);
                     ROS_ASSERT(dt_1 + dt_2 > 0);
                     double w1 = dt_2 / (dt_1 + dt_2);

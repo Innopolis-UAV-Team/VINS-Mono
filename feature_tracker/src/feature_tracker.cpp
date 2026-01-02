@@ -32,6 +32,8 @@ void reduceVector(vector<int> &v, vector<uchar> status)
 FeatureTracker::FeatureTracker()
 {
     clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
+    current_velocity = 0.0;
+    adaptive_max_cnt = MAX_CNT;
 }
 
 void FeatureTracker::setMask()
@@ -84,6 +86,9 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
     cv::Mat img;
     TicToc t_r;
     cur_time = _cur_time;
+    
+    // Always initialize with default feature count
+    adaptive_max_cnt = MAX_CNT;
 
     if (EQUALIZE)
     {
@@ -148,6 +153,41 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
         reduceVector(ids, status);
         reduceVector(cur_un_pts, status);
         reduceVector(track_cnt, status);
+        
+        // Estimate velocity based on optical flow magnitude (adaptive_max_cnt already initialized above)
+        if (ENABLE_VELOCITY_CHECK && cur_pts.size() > 10)
+        {
+            double total_flow = 0.0;
+            int valid_count = 0;
+            for (size_t i = 0; i < cur_pts.size(); i++)
+            {
+                cv::Point2f diff = forw_pts[i] - cur_pts[i];
+                double flow_mag = sqrt(diff.x * diff.x + diff.y * diff.y);
+                if (flow_mag < 100.0)  // sanity check: ignore outliers
+                {
+                    total_flow += flow_mag;
+                    valid_count++;
+                }
+            }
+            
+            if (valid_count > 0)
+            {
+                double avg_flow = total_flow / valid_count;
+                // Rough estimate: flow (pixels/frame) * focal_length_scale → velocity
+                // Assuming ~30fps and depth ~3m: pixel_flow * 0.01 ≈ velocity
+                double dt = cur_time - prev_time;
+                current_velocity = (dt > 0.001) ? (avg_flow / (FOCAL_LENGTH * dt)) * 3.0 : 0.0;
+                
+                // Adaptive feature count based on velocity
+                if (current_velocity > MAX_VELOCITY_THRESHOLD)
+                {
+                    adaptive_max_cnt = MAX_CNT + VELOCITY_BOOST_FEATURES;
+                    ROS_WARN_THROTTLE(2.0, "High velocity detected: %.2f m/s, boosting features to %d",
+                                      current_velocity, adaptive_max_cnt);
+                }
+            }
+        }
+        
         ROS_DEBUG("temporal optical flow costs: %fms", t_o.toc());
     }
 
@@ -164,7 +204,7 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
 
         ROS_DEBUG("detect feature begins");
         TicToc t_t;
-        int n_max_cnt = MAX_CNT - static_cast<int>(forw_pts.size());
+        int n_max_cnt = adaptive_max_cnt - static_cast<int>(forw_pts.size());
         if (n_max_cnt > 0)
         {
             if(mask.empty())

@@ -61,14 +61,20 @@ min_dist: 10            # min distance between two features
 freq: 20                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
 F_threshold: 1.0        # ransac threshold (pixel)
 fast_threshold: 20      # threshold for AGAST corner detector (default: 20)
-use_bidirectional_flow: 1  # 1: enable forward-backward tracking (more accurate, slower), 0: disable (faster)
+use_bidirectional_flow: 0  # DISABLED for speed (forward-only tracking)
 show_track: 1           # publish tracking image as topic
 equalize: 0             # if image is too dark or light, trun on equalize to find enough features
 fisheye: 0              # if using fisheye, trun on it. A circle mask will be loaded to remove edge noisy points
 
+#adaptive tracking for high-speed navigation
+enable_velocity_check: 1        # enable velocity-based adaptive feature tracking
+max_velocity_threshold: 3.0     # m/s - velocity threshold to trigger feature boost
+velocity_boost_features: 50     # extra features to add when high velocity detected
+min_parallax_threshold: 5.0     # pixels - minimum parallax for quality tracking
+
 #optimization parameters
-max_solver_time: 0.035   # max solver itration time (ms), to guarantee real time
-max_num_iterations: 10   # max solver itrations, to guarantee real time
+max_solver_time: 0.03   # max solver time (s) - reduced for real-time performance
+max_num_iterations: 15   # max solver itrations, to guarantee real time
 keyframe_parallax: 10.0  # keyframe selection threshold (pixel)
 
 
@@ -101,13 +107,13 @@ visualize_camera_size: 0.4      # size of camera marker in RVIZ
 
 #zero velocity update (ZUPT) parameters
 enable_zupt: 1                  # enable zero velocity update to prevent drift when stationary
-zupt_vel_threshold: 0.05        # velocity threshold (m/s) for detecting stationary state
-zupt_acc_threshold: 0.1         # acceleration deviation threshold (m/s^2) from gravity
+zupt_vel_threshold: 0.15        # velocity threshold (m/s) for detecting stationary state
+zupt_acc_threshold: 0.25         # acceleration deviation threshold (m/s^2) from gravity
 
 #imu filtering parameters
 enable_imu_acc_filter: 1        # enable accelerometer outlier rejection and smoothing
-imu_acc_max_change: 50.0        # maximum allowed acceleration change (m/s^2) for outlier detection
-imu_acc_filter_alpha: 0.8       # exponential filter coefficient (0.0-1.0, higher = more smoothing)
+imu_acc_max_change: 3.0        # maximum allowed acceleration change (m/s^2) for outlier detection
+imu_acc_filter_alpha: 0.75       # exponential filter coefficient (0.0-1.0, higher = more smoothing)
 
 #altitude scale correction parameters
 enable_altitude_scale_correction: 1  # enable scale correction using MAVLink altitude

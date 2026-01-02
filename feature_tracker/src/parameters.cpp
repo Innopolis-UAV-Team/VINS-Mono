@@ -20,6 +20,12 @@ bool PUB_THIS_FRAME;
 int FAST_THRESHOLD;
 int USE_BIDIRECTIONAL_FLOW;
 
+// Adaptive feature tracking
+double MAX_VELOCITY_THRESHOLD = 5.0;  // m/s
+int VELOCITY_BOOST_FEATURES = 50;     // extra features at high speed
+double MIN_PARALLAX_THRESHOLD = 5.0;  // pixels
+int ENABLE_VELOCITY_CHECK = 1;
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -70,6 +76,19 @@ void readParameters(ros::NodeHandle &n)
         USE_BIDIRECTIONAL_FLOW = fsSettings["use_bidirectional_flow"];
     else
         USE_BIDIRECTIONAL_FLOW = 1;
+    
+    // Adaptive tracking parameters
+    ENABLE_VELOCITY_CHECK = fsSettings["enable_velocity_check"].empty() ? 1 : (int)fsSettings["enable_velocity_check"];
+    if (!fsSettings["max_velocity_threshold"].empty())
+        MAX_VELOCITY_THRESHOLD = (double)fsSettings["max_velocity_threshold"];
+    if (!fsSettings["velocity_boost_features"].empty())
+        VELOCITY_BOOST_FEATURES = (int)fsSettings["velocity_boost_features"];
+    if (!fsSettings["min_parallax_threshold"].empty())
+        MIN_PARALLAX_THRESHOLD = (double)fsSettings["min_parallax_threshold"];
+    
+    if (ENABLE_VELOCITY_CHECK)
+        ROS_INFO("Velocity-adaptive tracking enabled: max_vel=%.1f m/s, boost=%d features",
+                 MAX_VELOCITY_THRESHOLD, VELOCITY_BOOST_FEATURES);
 
     if (FISHEYE == 1)
         FISHEYE_MASK = VINS_FOLDER_PATH + "config/fisheye_mask.jpg";

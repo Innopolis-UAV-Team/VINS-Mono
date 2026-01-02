@@ -100,11 +100,18 @@ void printStatistics(const Estimator &estimator, double t)
     last_path = estimator.Ps[WINDOW_SIZE];
     ROS_DEBUG("sum of path %f", sum_of_path);
     
-    // Always show optimized trajectory position
-    ROS_INFO("Optimized pose: x=%.3f y=%.3f z=%.3f", 
+    // Calculate horizontal and vertical velocity
+    double vel_horizontal = sqrt(estimator.Vs[WINDOW_SIZE].x() * estimator.Vs[WINDOW_SIZE].x() + 
+                                  estimator.Vs[WINDOW_SIZE].y() * estimator.Vs[WINDOW_SIZE].y());
+    double vel_vertical = estimator.Vs[WINDOW_SIZE].z();
+    
+    // Always show optimized trajectory position and velocity
+    ROS_INFO("Pose: x=%.3f y=%.3f z=%.3f | Vel: horiz=%.3f vert=%.3f m/s", 
              estimator.Ps[WINDOW_SIZE].x(), 
              estimator.Ps[WINDOW_SIZE].y(), 
-             estimator.Ps[WINDOW_SIZE].z());
+             estimator.Ps[WINDOW_SIZE].z(),
+             vel_horizontal,
+             vel_vertical);
     
     // Show td only when it was updated
     if (ESTIMATE_TD && estimator.td_updated)

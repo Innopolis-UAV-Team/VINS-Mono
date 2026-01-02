@@ -62,6 +62,10 @@ class FeatureTracker
     double cur_time;
     double prev_time;
     cv::Ptr<cv::CLAHE> clahe;  // Cached CLAHE object for performance
+    
+    // Adaptive tracking state
+    double current_velocity;   // estimated velocity magnitude (m/s)
+    int adaptive_max_cnt;      // dynamically adjusted feature count
 
     static int n_id;
 };

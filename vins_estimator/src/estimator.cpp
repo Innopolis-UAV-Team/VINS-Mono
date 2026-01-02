@@ -661,12 +661,12 @@ bool Estimator::failureDetection()
     }
     */
     Vector3d tmp_P = Ps[WINDOW_SIZE];
-    if ((tmp_P - last_P).norm() > 5)
+    if ((tmp_P - last_P).norm() > 10)  // increased threshold for high-speed navigation
     {
         ROS_INFO(" big translation");
         return true;
     }
-    if (abs(tmp_P.z() - last_P.z()) > 1)
+    if (abs(tmp_P.z() - last_P.z()) > 3)  // increased threshold for altitude changes
     {
         ROS_INFO(" big z translation");
         return true; 

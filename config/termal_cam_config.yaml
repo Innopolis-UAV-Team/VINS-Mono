@@ -56,20 +56,26 @@ extrinsicTranslation: !!opencv-matrix
    data: [0.00, 0.000, 0.00]
 
 #feature traker paprameters
-max_cnt: 180            # max feature number in feature tracking
-min_dist: 10            # min distance between two features 
+max_cnt: 150            # max feature number (reduced for faster processing)
+min_dist: 15            # min distance between features (larger spacing = fewer features)
 freq: 0                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
-F_threshold: 2.0        # ransac threshold (pixel)
-fast_threshold: 40      # threshold for AGAST corner detector (default: 20)
-use_bidirectional_flow: 1  # 1: enable forward-backward tracking (more accurate, slower), 0: disable (faster)
+F_threshold: 2.0        # ransac threshold (thermal: more tolerance for noise)
+fast_threshold: 20      # threshold for AGAST corner detector (higher = fewer but stronger features)
+use_bidirectional_flow: 0  # DISABLED for speed (forward-only tracking)
 show_track: 1           # publish tracking image as topic
 equalize: 1             # if image is too dark or light, trun on equalize to find enough features
 fisheye: 0  
 
+#adaptive tracking for high-speed navigation
+enable_velocity_check: 1        # enable velocity-based adaptive feature tracking
+max_velocity_threshold: 2.5     # m/s - higher threshold to avoid unnecessary boosting
+velocity_boost_features: 50    # reduced boost for speed
+min_parallax_threshold: 3.0     # pixels - minimum parallax (thermal: higher due to lower resolution)
+
 #optimization parameters
-max_solver_time: 0.035   # max solver itration time (ms), to guarantee real time
-max_num_iterations: 20   # max solver itrations, to guarantee real time
-keyframe_parallax: 10.0  # keyframe selection threshold (pixel)
+max_solver_time: 0.03   # max solver time (s) - reduced for real-time performance
+max_num_iterations: 15   # reduced iterations for speed
+keyframe_parallax: 10.0  # higher threshold = fewer keyframes = less computation
 
 
 #imu parameters       The more accurate parameters you provide, the better performance
@@ -101,13 +107,13 @@ visualize_camera_size: 0.4      # size of camera marker in RVIZ
 
 #zero velocity update (ZUPT) parameters
 enable_zupt: 1                  # enable zero velocity update to prevent drift when stationary
-zupt_vel_threshold: 0.5        # velocity threshold (m/s) for detecting stationary state
-zupt_acc_threshold: 0.5         # acceleration deviation threshold (m/s^2) from gravity
+zupt_vel_threshold: 0.15        # velocity threshold (thermal: more sensitive to catch stationary state)
+zupt_acc_threshold: 0.25         # acceleration deviation threshold (thermal: tighter threshold)
 
 #imu filtering parameters
 enable_imu_acc_filter: 1        # enable accelerometer outlier rejection and smoothing
-imu_acc_max_change: 50.0        # maximum allowed acceleration change (m/s^2) for outlier detection
-imu_acc_filter_alpha: 0.8       # exponential filter coefficient (0.0-1.0, higher = more smoothing)
+imu_acc_max_change: 3.0        # maximum allowed acceleration change (thermal: slightly more tolerance)
+imu_acc_filter_alpha: 0.75       # exponential filter coefficient (thermal: slightly less smoothing for responsiveness)
 
 #altitude scale correction parameters
 enable_altitude_scale_correction: 1  # enable scale correction using MAVLink altitude
