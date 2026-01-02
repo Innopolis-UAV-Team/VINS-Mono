@@ -1,5 +1,39 @@
-# VINS-Mono
-## A Robust and Versatile Monocular Visual-Inertial State Estimator
+# VINS-Mono-Inno (UAV Performance Branch)
+## Heavily Modified VINS-Mono for UAV Applications
+
+**This is a deeply modified fork** of the excellent [VINS-Mono](https://github.com/HKUST-Aerial-Robotics/VINS-Mono) project by HKUST Aerial Robotics Group, optimized specifically for **autonomous UAV navigation** with enhanced robustness and performance.
+
+**Repository**: [https://github.com/Innopolis-UAV-Team/VINS-Mono-inno](https://github.com/Innopolis-UAV-Team/VINS-Mono-inno) (branch: `UAV_perfom`)
+
+### Key Modifications & Improvements
+
+🚁 **UAV-Optimized Performance**:
+- **AGAST corner detector** replacing Shi-Tomasi (faster, adaptive)
+- **Grid-based feature selection** for uniform spatial distribution
+- **Bidirectional optical flow** with forward-backward consistency checks
+- **IMU accelerometer filtering**: outlier rejection + exponential smoothing for noisy sensors
+- **Zero Velocity Update (ZUPT)** to prevent drift when stationary
+
+🎯 **MAVLink Integration**:
+- **Altitude-based scale correction** using `/mavros/local_position/velocity_local`
+- Integrates vertical velocity (Z-only) from barometer/GPS fusion
+- Automatic scale drift compensation (gentle 10% correction per update)
+
+⚡ **Performance Enhancements**:
+- **Periodic time offset (td) estimation** to reduce computational overhead (7s intervals)
+- **TF broadcasting** of loop-closed trajectory (`world -> camera_pose_graph`)
+- Optimized logging with real-time pose output
+
+📊 **Thermal Camera Support**:
+- Pre-configured for 384×288 thermal imaging
+- CLAHE optimization for low-contrast imagery
+- Tuned feature detection parameters for thermal sensors
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed technical documentation.
+
+---
+
+## Original VINS-Mono Information
 
 **11 Jan 2019**: An extension of **VINS**, which supports stereo cameras / stereo cameras + IMU / mono camera + IMU, is published at [VINS-Fusion](https://github.com/HKUST-Aerial-Robotics/VINS-Fusion)
 
@@ -53,11 +87,11 @@ additional ROS pacakge
 1.2. **Ceres Solver**
 Follow [Ceres Installation](http://ceres-solver.org/installation.html), use **version 1.14.0** and remember to **sudo make install**. (There are compilation issues in Ceres versions 2.0.0 and above.)
 
-## 2. Build VINS-Mono on ROS
+## 2. Build VINS-Mono-Inno on ROS
 Clone the repository and catkin_make:
 ```
     cd ~/catkin_ws/src
-    git clone https://github.com/HKUST-Aerial-Robotics/VINS-Mono.git
+    git clone -b UAV_perfom git@github.com:Innopolis-UAV-Team/VINS-Mono-inno.git
     cd ../
     catkin_make
     source ~/catkin_ws/devel/setup.bash
@@ -156,6 +190,8 @@ We use [ceres solver](http://ceres-solver.org/) for non-linear optimization and 
 ## 8. Licence
 The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.
 
-We are still working on improving the code reliability. For any technical issues, please contact Tong QIN <tong.qinATconnect.ust.hk> or Peiliang LI <pliapATconnect.ust.hk>.
+**This modified version** is maintained by **Innopolis UAV Team**. For technical issues specific to this fork, please open an issue on [GitHub](https://github.com/Innopolis-UAV-Team/VINS-Mono-inno/issues).
+
+**Original VINS-Mono authors**: Tong QIN, Peiliang LI, Zhenfei YANG, and Shaojie SHEN from HKUST Aerial Robotics Group.
 
 For commercial inquiries, please contact Shaojie SHEN <eeshaojieATust.hk>
