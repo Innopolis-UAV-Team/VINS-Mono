@@ -1,6 +1,27 @@
 # CHANGELOG
 
-## [Unreleased] - 2026-01-02
+## [Unreleased] - 2026-01-04
+
+### Added - Unified Feature Detection & Optical Flow Control
+- **Single configuration flag (`use_advanced_flow`)** to switch between original VINS-Fusion and enhanced UAV implementation
+  - `use_advanced_flow: 0` — Original VINS-Fusion style:
+    - Shi-Tomasi corner detector (`goodFeaturesToTrack`)
+    - Basic Lucas-Kanade optical flow (default parameters)
+    - No forward-backward consistency check
+  - `use_advanced_flow: 1` — Enhanced UAV implementation (default):
+    - AGAST corner detector with grid-based spatial distribution
+    - Advanced LK with strict termination criteria (40 iterations, 0.001 eps)
+    - Optional forward-backward consistency check (if `use_bidirectional_flow: 1`)
+    - Subpixel refinement for top 50 features
+- **Rationale**: Single toggle for complete feature tracking pipeline — useful for benchmarking and fallback to proven VINS-Fusion behavior
+- **Configuration**:
+  ```yaml
+  use_advanced_flow: 1                # 1=enhanced (AGAST), 0=original (Shi-Tomasi)
+  use_bidirectional_flow: 0           # Only active when use_advanced_flow=1
+  fast_threshold: 20                  # AGAST response threshold (use_advanced_flow=1)
+  ```
+
+## [Previous] - 2026-01-02
 
 ### Added - Velocity-Based Adaptive Feature Tracking
 - **Dynamic feature count adjustment** based on estimated velocity for high-speed navigation stability
